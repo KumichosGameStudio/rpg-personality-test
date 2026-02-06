@@ -319,22 +319,18 @@ async function scoreWithLLM(sceneText, userAnswer, noPenalty) {
 
   state.calls += 1;
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      temperature: 0,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: "You are a strict JSON-only scorer." },
-        { role: "user", content: prompt }
-      ]
-    }),
-  });
+ const res = await fetch("/api/score", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    model: MODEL,
+    prompt
+  })
+});
+
+const data = await res.json();
+const content = data?.content ?? "";
+
 
   if (!res.ok) {
     return { invalid: true, scores: { O:0,C:0,E:0,A:0,N:0 }, reason_short: `http_${res.status}` };
@@ -458,3 +454,4 @@ $debugToggle.addEventListener("change", renderDebug);
 
 // ====== Init ======
 updateUI();
+
