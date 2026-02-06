@@ -2,15 +2,12 @@
 
 // ====== Config ======
 const MAX_API_CALLS = 5; // Scene1..Scene5のみ（Scene0は除外）
-const MODEL = "gpt-4.1-mini"; // 例。好きに変更OK
-
-// NOTE: プロトタイプ用。後で安全な形に置き換える前提。
-let OPENAI_API_KEY = ""; // ここに直書きでも動く
+const MODEL = "gpt-4.1-mini"; // Vercel側でもデフォルトはこれ
 
 // Big Five keys
 const TRAITS = ["O", "C", "E", "A", "N"];
 
-// ====== Scenes (ここに完成文章を貼る) ======
+// ====== Scenes ======
 const SCENES = [
   {
     id: 0,
@@ -19,7 +16,6 @@ const SCENES = [
 君は旅に――`,
     llm: false,
   },
-
   {
     id: 1,
     label: "Scene 1",
@@ -28,9 +24,8 @@ const SCENES = [
 そんな何気ない日常の選択肢すら、今日は少しだけ違って見える。
 今この瞬間、君は何を考え、どんな行動を取るだろうか。
 短くて構わないので、具体的に書いてほしい。`,
-    llm: true
+    llm: true,
   },
-
   {
     id: 2,
     label: "Scene 2",
@@ -49,9 +44,8 @@ const SCENES = [
 どちらも苦痛に顔を歪め、助けを求めているように見える。
 君はどうするだろうか。その場で取る行動と、そのときの気持ちを記してほしい。`;
       }
-    }
+    },
   },
-
   {
     id: 3,
     label: "Scene 3",
@@ -60,9 +54,8 @@ const SCENES = [
 それほど広く語られているにもかかわらず、
 なぜか“魔族が何か事件を起こした”という話は一向に聞こえてこない。
 この奇妙な状況を、君はどのように思うだろうか。`,
-    llm: true
+    llm: true,
   },
-
   {
     id: 4,
     label: "Scene 4",
@@ -82,9 +75,8 @@ const SCENES = [
 今の君は、何を思い、何を望んでいるだろうか。
 浮かんだ気持ちを、短く書いてほしい。`;
       }
-    }
+    },
   },
-
   {
     id: 5,
     label: "Scene 5",
@@ -104,17 +96,16 @@ const SCENES = [
 今、君は何を想い、どのように行動しようとするだろうか。
 浮かんだ考えを、短く書いてほしい。`;
       }
-    }
+    },
   },
 ];
 
 // ====== State ======
 const state = {
   sceneIndex: 0,
-  route: null, // "A" or "B" or "C" (Cは脱構造、A/Bは旅の分岐に絡む)
+  route: null, // "A" or "B" or "C"
   calls: 0,
   scores: { O: 0, C: 0, E: 0, A: 0, N: 0 }, // 0..10
-  // ログ
   history: [],
 };
 
@@ -130,36 +121,45 @@ const $nextBtn = document.getElementById("nextBtn");
 const $resetBtn = document.getElementById("resetBtn");
 const $debugToggle = document.getElementById("debugToggle");
 const $debugBox = document.getElementById("debugBox");
+
 const $routeButtons = document.getElementById("routeButtons");
 const $routeA = document.getElementById("routeA");
 const $routeB = document.getElementById("routeB");
 const $routeC = document.getElementById("routeC");
 
-
 // ====== Helpers ======
-function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function getSceneText(scene) {
+  return typeof scene.text === "function" ? scene.text() : scene.text;
+}
 
 function updateUI() {
   const scene = SCENES[state.sceneIndex];
+
   $sceneLabel.textContent = scene.label;
   $routeLabel.textContent = `Route: ${state.route ?? "-"}`;
   $callLabel.textContent = `API: ${state.calls}/${MAX_API_CALLS}`;
-  $storyText.textContent =
-  typeof scene.text === "function"
-    ? scene.text()
-    : scene.text;
 
+  $storyText.textContent = getSceneText(scene);
 
-  $answerInput.value = "";
-// Scene0は入力欄を隠して、ルートボタンを出す
-const isScene0 = (scene.id === 0);
+  // Scene0は入力欄を隠して、ルートボタンを出す
+  const isScene0 = (scene.id === 0);
 
-$routeButtons.classList.toggle("hidden", !isScene0);
-document.querySelector(".inputArea").classList.toggle("hidden", isScene0);
+  // ここがScene0ボタン表示の本体
+  $routeButtons?.classList.toggle("hidden", !isScene0);
 
-$nextBtn.disabled = isScene0; // Scene0はボタンで進める
+  // 入力欄のラッパーが存在しないHTMLでも落ちないように
+  document.querySelector(".inputArea")?.classList.toggle("hidden", isScene0);
 
+  $nextBtn.disabled = isScene0;
+
+  // 入力欄初期化（Scene0ではhiddenだが念のため）
+  if ($answerInput) $answerInput.value = "";
   $countLabel.textContent = `0/200`;
+
   $hintLabel.textContent = scene.llm
     ? "物語の文脈に沿って答えてください（無意味回答は倒れる）"
     : "ここでルートが決まります";
@@ -168,9 +168,9 @@ $nextBtn.disabled = isScene0; // Scene0はボタンで進める
 }
 
 function renderDebug() {
-  const on = $debugToggle.checked;
-  $debugBox.classList.toggle("hidden", !on);
-  if (!on) return;
+  const on = !!$debugToggle?.checked;
+  $debugBox?.classList.toggle("hidden", !on);
+  if (!on || !$debugBox) return;
 
   $debugBox.textContent =
 `sceneIndex: ${state.sceneIndex}
@@ -187,6 +187,7 @@ function resetAll() {
   state.calls = 0;
   state.scores = { O: 0, C: 0, E: 0, A: 0, N: 0 };
   state.history = [];
+  $nextBtn.disabled = false;
   updateUI();
 }
 
@@ -197,7 +198,7 @@ function allowedEndingKeys() {
   const endings = window.ENDINGS || {};
   const keys = Object.keys(endings);
 
-  if (!state.route) return keys; // 念のため
+  if (!state.route) return keys;
   if (state.route === "A") return keys.filter(k => endings[k].route.includes("A") || endings[k].route.includes("C"));
   if (state.route === "B") return keys.filter(k => endings[k].route.includes("B") || endings[k].route.includes("C"));
   if (state.route === "C") return keys.filter(k => endings[k].route.includes("C"));
@@ -205,7 +206,6 @@ function allowedEndingKeys() {
 }
 
 function distanceToIdeal(current, ideal) {
-  // 二乗距離でもOK。まずはL1で直感的に。
   let d = 0;
   for (const t of TRAITS) d += Math.abs((current[t] ?? 0) - (ideal[t] ?? 0));
   return d;
@@ -239,37 +239,8 @@ ${endingObj.text}
   $nextBtn.disabled = true;
 }
 
-// ====== Scene0 Route Decide ======
-function decideRouteFromScene0Answer(answer) {
-  // ここは「厳密な自然言語判定」をやるとLLMが欲しくなるので、
-  // 最小プロトタイプとしてキーワード判定にしておく。
-  // Scene0文章が完成しているなら、選択肢を明示して
-  // 入力も「A/B/Cのどれかを含める」形式にするのが一番堅い。
-
-  const a = answer.trim();
-  if (!a) return null;
-
-  // 例: 入力に A / B / C が含まれていたら採用
-  const upper = a.toUpperCase();
-  if (upper.includes("A")) return "A";
-  if (upper.includes("B")) return "B";
-  if (upper.includes("C")) return "C";
-
-  // 旅に出る/出ないの語彙でも軽く拾う
-  if (a.includes("旅に出る") || a.includes("討伐") || a.includes("行く")) return "A";
-  if (a.includes("出ない") || a.includes("残る") || a.includes("行かない")) return "B";
-
-  // 脱構造っぽいワード
-  if (a.includes("壊す") || a.includes("拒否") || a.includes("構造") || a.includes("脱")) return "C";
-
-  return null;
-}
-
 // ====== LLM scoring prompt ======
 function buildScoringPrompt(sceneText, userAnswer, noPenalty) {
-  // noPenalty: Scene5で減点なし（0..2のうち 0 は「加点なし」扱い。マイナスを返させない）
-  // ここで「無意味回答」判定もやらせ、invalid=trueなら全0扱いで倒れる。
-
   return `
 あなたは「物語形式の性格診断」採点器です。
 Big Five (O,C,E,A,N) に対して、ユーザー回答が示す傾向を 0〜2 点で返します。
@@ -299,51 +270,34 @@ ${userAnswer}
 `.trim();
 }
 
-// ====== OpenAI call ======
+// ====== Server call (/api/score) ======
 async function scoreWithLLM(sceneText, userAnswer, noPenalty) {
   if (state.calls >= MAX_API_CALLS) {
-    // 念のため。上限超えならinvalid扱いで倒れる
     return { invalid: true, scores: { O:0,C:0,E:0,A:0,N:0 }, reason_short: "api_limit" };
   }
 
   const prompt = buildScoringPrompt(sceneText, userAnswer, noPenalty);
 
-  // Keyが空なら、プロトタイプとしてユーザーに入力してもらう
-  if (!OPENAI_API_KEY) {
-    const k = window.prompt("OpenAI API Key を入力（プロトタイプ用）:");
-    if (k) OPENAI_API_KEY = k.trim();
-  }
-  if (!OPENAI_API_KEY) {
-    return { invalid: true, scores: { O:0,C:0,E:0,A:0,N:0 }, reason_short: "no_key" };
-  }
-
   state.calls += 1;
 
- const res = await fetch("/api/score", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    model: MODEL,
-    prompt
-  })
-});
+  const res = await fetch("/api/score", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: MODEL, prompt }),
+  });
 
-const data = await res.json();
-const content = data?.content ?? "";
-
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
     return { invalid: true, scores: { O:0,C:0,E:0,A:0,N:0 }, reason_short: `http_${res.status}` };
   }
 
-  const data = await res.json();
-  const content = data?.choices?.[0]?.message?.content ?? "";
+  const content = data?.content ?? "";
 
   try {
     const parsed = JSON.parse(content);
-    // 型・範囲をガード
     const s = parsed.scores || {};
-    const out = {
+    return {
       invalid: !!parsed.invalid,
       scores: {
         O: clamp(Number(s.O ?? 0), 0, 2),
@@ -354,18 +308,13 @@ const content = data?.content ?? "";
       },
       reason_short: String(parsed.reason_short ?? "").slice(0, 20),
     };
-    return out;
   } catch {
     return { invalid: true, scores: { O:0,C:0,E:0,A:0,N:0 }, reason_short: "parse_fail" };
   }
 }
 
 // ====== Apply score ======
-function applyScores(delta, noPenalty) {
-  // delta: 0..2
-  // noPenaltyは「減点なし」だが、そもそもdeltaが0..2なので通常と同じ。
-  // 将来「-2..+2」に拡張したい場合に備えて引数だけ残す。
-
+function applyScores(delta) {
   for (const t of TRAITS) {
     state.scores[t] = clamp(state.scores[t] + (delta[t] ?? 0), 0, 10);
   }
@@ -374,40 +323,29 @@ function applyScores(delta, noPenalty) {
 // ====== Progress ======
 async function onNext() {
   const scene = SCENES[state.sceneIndex];
-  const answer = $answerInput.value.trim();
 
-  // 文字数はmaxlengthで制限済みだが、念のため
+  // Scene0はボタンで進むので、Nextは基本無効だが念のためガード
+  if (scene.id === 0) return;
+
+  const answer = ($answerInput?.value ?? "").trim();
   if (answer.length === 0) {
     $hintLabel.textContent = "何か入力してください。";
     return;
   }
 
-  // Scene0: route decide only
- 
-  // Scene1..5: LLM scoring
- const sceneText =
-  typeof scene.text === "function"
-    ? scene.text()
-    : scene.text;
+  const sceneText = getSceneText(scene);
+  const result = await scoreWithLLM(sceneText, answer, !!scene.noPenalty);
 
-const result = await scoreWithLLM(sceneText, answer, !!scene.noPenalty);
-
-
-  state.history.push({
-    scene: scene.id,
-    answer,
-    llm: result,
-  });
+  state.history.push({ scene: scene.id, answer, llm: result });
 
   if (result.invalid) {
-    // 暗黙エンド14へ
     const fall = window.ENDING_FALL;
     showEnding({ ...fall, distance: "-" });
     renderDebug();
     return;
   }
 
-  applyScores(result.scores, !!scene.noPenalty);
+  applyScores(result.scores);
 
   // 次へ or ending
   if (scene.id < 5) {
@@ -427,16 +365,7 @@ const result = await scoreWithLLM(sceneText, answer, !!scene.noPenalty);
   renderDebug();
 }
 
-// ====== Events ======
-$answerInput.addEventListener("input", () => {
-  $countLabel.textContent = `${$answerInput.value.length}/200`;
-});
-
-$nextBtn.addEventListener("click", () => { onNext(); });
-$resetBtn.addEventListener("click", () => {
-  $nextBtn.disabled = false;
-  resetAll();
-});
+// ====== Route Buttons ======
 function goRoute(routeKey) {
   state.route = routeKey;
   state.history.push({ scene: 0, route: routeKey, answer: "(button)" });
@@ -445,12 +374,19 @@ function goRoute(routeKey) {
   updateUI();
 }
 
-$routeA.addEventListener("click", () => goRoute("A"));
-$routeB.addEventListener("click", () => goRoute("B"));
-$routeC.addEventListener("click", () => goRoute("C"));
+// ====== Events ======
+$answerInput?.addEventListener("input", () => {
+  $countLabel.textContent = `${($answerInput.value ?? "").length}/200`;
+});
 
+$nextBtn?.addEventListener("click", () => { onNext(); });
+$resetBtn?.addEventListener("click", resetAll);
 
-$debugToggle.addEventListener("change", renderDebug);
+$routeA?.addEventListener("click", () => goRoute("A"));
+$routeB?.addEventListener("click", () => goRoute("B"));
+$routeC?.addEventListener("click", () => goRoute("C"));
+
+$debugToggle?.addEventListener("change", renderDebug);
 
 // ====== Init ======
 updateUI();
