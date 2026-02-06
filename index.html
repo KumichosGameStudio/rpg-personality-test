@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RPG性格診断</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <h1 class="title">RPG性格診断</h1>
+      <p class="subtitle">物語を進めるほど、あなたの傾向が浮かび上がる。</p>
+    </header>
+
+    <section class="card">
+      <div class="meta">
+        <span id="sceneLabel" class="badge">Scene 0</span>
+        <span id="routeLabel" class="badge ghost">Route: -</span>
+        <span id="callLabel" class="badge ghost">API: 0/5</span>
+      </div>
+
+      <article class="story">
+        <p id="storyText"></p>
+      </article>
+
+<div id="routeButtons" class="routeButtons hidden">
+  <p class="label">選択</p>
+  <div class="actions">
+    <button id="routeA" class="btn primary">旅に出る（討伐に向かう）</button>
+    <button id="routeB" class="btn">旅に出ない（村に残る）</button>
+    <button id="routeC" class="btn">脱構造（別の道）</button>
+  </div>
+</div>
+
+      <div class="inputArea">
+        <label for="answerInput" class="label">あなたの返答（200字以内）</label>
+        <textarea id="answerInput" maxlength="200" rows="5" placeholder="ここに入力…"></textarea>
+        <div class="row">
+          <small id="countLabel" class="count">0/200</small>
+          <small id="hintLabel" class="hint"></small>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="nextBtn" class="btn primary">次へ</button>
+        <button id="resetBtn" class="btn">最初から</button>
+      </div>
+
+      <div id="debugBox" class="debug hidden"></div>
+    </section>
+
+    <footer class="footer">
+      <label class="checkbox">
+        <input type="checkbox" id="debugToggle" />
+        <span>デバッグ表示</span>
+      </label>
+    </footer>
+  </main>
+
+  <script src="./endings.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
