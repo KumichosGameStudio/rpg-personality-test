@@ -1,12 +1,13 @@
+// api/score.js
+
 // ---- Simple daily rate limit (per IP) ----
 const DAILY_LIMIT = 1;
 const hits = new Map();
 
 function getDayKey(ip) {
   const d = new Date();
-  return `${ip}_${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;
+  return `${ip}_${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`;
 }
-
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -16,6 +17,20 @@ export default async function handler(req, res) {
   try {
     const { model, prompt } = req.body || {};
     if (!prompt) return res.status(400).json({ error: "Missing prompt" });
+
+    // ✅ Rate limit BEFORE calling OpenAI
+    const ip =
+      req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+      req.socket?.remoteAddress ||
+      "unknown";
+
+    const key = getDayKey(ip);
+    const count = hits.get(key) || 0;
+
+    if (count >= DAILY_LIMIT) {
+      return res.status(429).json({ error: "Daily limit reached" });
+    }
+    hits.set(key, count + 1);
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: "Server missing OPENAI_API_KEY" });
@@ -48,3 +63,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Server exception", details: String(e) });
   }
 }
+
