@@ -13,7 +13,7 @@ const SCENES = [
     id: 0,
     label: "Scene 0",
     text: `何事もなく平穏に過ごしていたある朝、村の住人から“魔族が復活した”という噂を聞いた。
-君は旅に――`,
+君は――`,
     llm: false,
   },
   {
@@ -390,4 +390,5 @@ $debugToggle?.addEventListener("change", renderDebug);
 
 // ====== Init ======
 updateUI();
+
 
