@@ -1,3 +1,13 @@
+// ---- Simple daily rate limit (per IP) ----
+const DAILY_LIMIT = 1;
+const hits = new Map();
+
+function getDayKey(ip) {
+  const d = new Date();
+  return `${ip}_${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;
+}
+
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
